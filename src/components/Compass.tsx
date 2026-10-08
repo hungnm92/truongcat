@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  adviseDirection, cungPhi, DIR_ORDER, PURPOSE_LABEL, QUAI_DIR, QUAI_SYMBOL, SON24, STAR_NOTE, TRACH_MEANING, batTrach, starTone, sonOfDegree, quaiOfDegree,
+  adviseDirection, cungPhi, vanOfYear, vanLabel, DIR_ORDER, PURPOSE_LABEL, QUAI_DIR, QUAI_SYMBOL, SON24, STAR_NOTE, TRACH_MEANING, batTrach, starTone, sonOfDegree, quaiOfDegree,
   type Cell, type Purpose, type Quai,
 } from '../lib/fengshui'
 import type { Chart } from '../lib/chart'
@@ -48,9 +48,12 @@ export function Compass({ chart }: { chart: Chart }) {
   const [purpose, setPurpose] = useState<Purpose>('nha')
   const [deg, setDeg] = useState(0)
   const [applied, setApplied] = useState<number | null>(null)
+  const [buildYear, setBuildYear] = useState(new Date().getFullYear())
+  const [viewYear, setViewYear] = useState(chart.input.viewYear)
+  const van = vanOfYear(buildYear)
   const ly = lunarOfSolar(chart.effective.y, chart.effective.m, chart.effective.d)
   const menh: Quai = cungPhi(ly.y, chart.input.gender)
-  const advice = useMemo(() => (applied === null ? null : adviseDirection(applied, purpose, menh)), [applied, purpose, menh])
+  const advice = useMemo(() => (applied === null ? null : adviseDirection(applied, purpose, menh, van, viewYear)), [applied, purpose, menh, van, viewYear])
   const table = batTrach(menh)
 
   const setDegree = (v: number) => setDeg(Math.min(360, Math.max(0, Number.isFinite(v) ? v : 0)) % 360)
@@ -84,6 +87,19 @@ export function Compass({ chart }: { chart: Chart }) {
               <span className="small" style={{ flex: 2 }}>Sơn {sonOfDegree(deg)} · {QUAI_DIR[quaiOfDegree(deg)]}</span>
             </div>
           </div>
+          {purpose === 'nha' && (
+            <div className="grid2" style={{ gap: 10 }}>
+              <div className="field">
+                <label htmlFor="by">Năm xây / nhập trạch</label>
+                <input id="by" type="number" min={1900} max={2100} value={buildYear} onChange={(e) => setBuildYear(Number(e.target.value) || buildYear)} />
+                <span className="small">{vanLabel(van)}</span>
+              </div>
+              <div className="field">
+                <label htmlFor="vy">Năm xem lưu niên</label>
+                <input id="vy" type="number" min={1900} max={2200} value={viewYear} onChange={(e) => setViewYear(Number(e.target.value) || viewYear)} />
+              </div>
+            </div>
+          )}
           <button className="btn red" onClick={() => setApplied(deg)}>Ấn định tọa hướng</button>
         </div>
 
@@ -114,20 +130,22 @@ export function Compass({ chart }: { chart: Chart }) {
       {advice && purpose === 'nha' && (
         <div className="card" style={{ marginTop: 14 }}>
           <h3>Phi tinh {advice.hk.pattern ? '· ' + advice.hk.pattern : ''}</h3>
-          <p className="small">Tọa {advice.hk.tonSon} hướng {advice.hk.huong}. Mỗi ô: sao vận (lớn), sơn tinh (trái), hướng tinh (phải).</p>
+          <p className="small">Tọa {advice.hk.tonSon} hướng {advice.hk.huong} · {vanLabel(advice.hk.van)}{advice.hk.theQuai ? ` · kiêm ${Math.abs(advice.hk.kiem)}°, dùng Thế quái` : ''}. Mỗi ô: sao vận (lớn), sơn tinh · hướng tinh, và sao lưu niên {advice.hk.year}.</p>
           <div className="hk">
             {GRID.map((g) => {
               const c = advice.hk.cells[g.cell]
               return (
                 <div key={g.cell} title={`${STAR_NOTE[c.van]}`}>
                   <div className="dir">{g.label}</div>
-                  <div className={`v ${starTone(c.van)}`}>{c.van}</div>
-                  <div><span className={starTone(c.son)}>{c.son}</span> · <span className={starTone(c.huong)}>{c.huong}</span></div>
+                  <div className={`v ${starTone(c.van, advice.hk.van)}`}>{c.van}</div>
+                  <div><span className={starTone(c.son, advice.hk.van)}>{c.son}</span> · <span className={starTone(c.huong, advice.hk.van)}>{c.huong}</span></div>
+                  <div className="small">Năm: <b className={c.year === 5 || c.year === 2 ? 'hung' : ''}>{c.year}</b></div>
                 </div>
               )
             })}
           </div>
-          <p className="small">Xanh: sao cát (1, 8, 9) · Xám: bình (4, 6) · Đỏ: sao hung (2, 3, 5, 7). Bản này dùng Vận 9 và chưa áp dụng "thế quái", nên chỉ nên dùng như tham khảo trước khi nhờ thầy địa lý khảo sát thực địa.</p>
+          <ul className="dots" style={{ marginTop: 10 }}>{advice.hk.annualWarn.map((t, i) => <li key={i}>{t}</li>)}</ul>
+          <p className="small">Xanh: sao đương vận và sinh khí · Xám: bình · Đỏ: sao suy/sát. Thế quái tự áp dụng khi hướng lệch quá 4.5° khỏi chính giữa sơn. Kết quả là tham khảo; nên khảo sát thực địa trước khi quyết định lớn.</p>
         </div>
       )}
     </section>

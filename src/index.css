@@ -339,3 +339,10 @@ input::placeholder, textarea::placeholder { color: #c4b89c; font-weight: 400; op
   .step-line { flex-basis: 6px; }
   .stepper { top: 4px; padding: 6px; }
 }
+.lunar-preview { background: #fbf3dd; border: 1px dashed var(--gold-2); border-radius: 12px; padding: 10px 14px; margin: -4px 0 16px; font-size: .92rem; }
+.lunar-preview b { font-family: var(--serif); color: var(--red); }
+.lunar-preview .small { margin-top: 4px; }
+.box input[type=number], .box input[type=text], .box select { border: 0; background: transparent; padding: 0; border-radius: 0; box-shadow: none; width: 100%; min-width: 0; }
+.box input[type=number]:focus { box-shadow: none; }
+.box input[type=number]::-webkit-inner-spin-button, .box input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.box input[type=number] { -moz-appearance: textfield; appearance: textfield; }

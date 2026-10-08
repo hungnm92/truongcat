@@ -15,6 +15,9 @@ export interface DayInfo {
   duongCongKy: boolean
   dayChi: string
   yearChi: string
+  catThan: string[] // tên Hán, tra trong data/thansat
+  hungSat: string[]
+  gioHoangDao: { chi: string; from: string; to: string }[]
 }
 
 const TIET_KHI: Record<string, string> = {
@@ -56,6 +59,9 @@ export function dayInfo(y: number, m: number, d: number): DayInfo {
     duongCongKy: (DUONG_CONG_KY[lm] ?? []).includes(ld),
     dayChi: chiHanToVi(l.getDayInGanZhi()[1]),
     yearChi: chiHanToVi(l.getYearInGanZhi()[1]),
+    catThan: l.getDayJiShen().filter((x: string) => x !== '无'),
+    hungSat: l.getDayXiongSha().filter((x: string) => x !== '无'),
+    gioHoangDao: gioHoangDao(l),
   }
 }
 
@@ -67,4 +73,18 @@ export function lunarOfSolar(y: number, m: number, d: number) {
 
 export function daysInMonth(y: number, m: number) {
   return new Date(y, m, 0).getDate()
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function gioHoangDao(l: any) {
+  const out: { chi: string; from: string; to: string }[] = []
+  // getTimes() trả 13 giờ (Tý sớm + Tý muộn); bỏ Tý muộn để không trùng.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const t of l.getTimes().slice(0, 12) as any[]) {
+    if (t.getTianShenType() === '黄道') {
+      const chi = chiHanToVi(t.getZhi())
+      out.push({ chi, from: chi === 'Tý' ? '23:00' : t.getMinHm(), to: t.getMaxHm() })
+    }
+  }
+  return out
 }

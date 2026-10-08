@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { NO_JOURNEY, validateBirth, type BirthInput } from '../lib/chart'
-import { PROVINCES } from '../lib/vn'
+import { NO_JOURNEY, timeIndexOf, validateBirth, type BirthInput } from '../lib/chart'
+import { DIA_CHI, PROVINCES, pad2 } from '../lib/vn'
+import { lunarOfSolar } from '../lib/calendar'
 import { Mandala } from './Art'
 
 export const JOURNEY_OPTIONS = {
@@ -24,6 +25,41 @@ function NumBox({ label, name, value, min, max, onChange, ph }: { label: string;
       <span>{label}</span>
       <input type="number" inputMode="numeric" name={name} aria-label={label} placeholder={ph} min={min} max={max} value={val(value)} onChange={(e) => onChange(num(e.target.value))} />
     </label>
+  )
+}
+
+/** Dòng đối chiếu dương → âm lịch, cập nhật theo từng ô nhập. */
+function LunarPreview({ b }: { b: BirthInput }) {
+  const { day, month, year, hour, minute } = b
+  const dateOk = [day, month, year].every(Number.isFinite) && year >= 1900 && year <= 2100 && month >= 1 && month <= 12 && day >= 1 && day <= new Date(year, month, 0).getDate()
+  if (!dateOk) return <div className="lunar-preview muted">Nhập đủ ngày, tháng, năm để xem ngày âm lịch tương ứng.</div>
+
+  let dt = new Date(year, month - 1, day, Number.isFinite(hour) ? hour : 12, Number.isFinite(minute) ? minute : 0)
+  const shifted = b.solarAdjust && Number.isFinite(hour)
+  if (shifted) {
+    const p = PROVINCES.find((x) => x.name === b.province)
+    if (p) dt = new Date(dt.getTime() + Math.round((p.lng - 105) * 4) * 60000)
+  }
+  const l = lunarOfSolar(dt.getFullYear(), dt.getMonth() + 1, dt.getDate())
+  const hourOk = Number.isFinite(hour) && hour >= 0 && hour <= 23
+  const ti = hourOk ? timeIndexOf(dt.getHours()) : -1
+  const chi = ti < 0 ? '' : DIA_CHI[ti % 12]
+  const from = ti <= 0 || ti === 12 ? 23 : ti * 2 - 1
+  const range = ti < 0 ? '' : `${pad2(from)}h–${pad2((from + 2) % 24)}h`
+  const beforeTet = l.y !== year
+
+  return (
+    <div className="lunar-preview" aria-live="polite">
+      <div>
+        <span className="muted">= Âm lịch </span>
+        <b>{l.d}/{l.m}{l.leap ? ' (nhuận)' : ''}</b> năm <b>{l.yearGZ}</b>
+        {hourOk && <> · giờ <b>{chi}</b> <span className="muted">({range})</span></>}
+      </div>
+      {shifted && <div className="small">Đã hiệu chỉnh theo kinh độ {b.province}: {pad2(dt.getHours())}:{pad2(dt.getMinutes())}{dt.getDate() !== day ? ` ngày ${dt.getDate()}/${dt.getMonth() + 1}` : ''}.</div>}
+      {beforeTet && <div className="small">Sinh trước Tết Nguyên Đán nên tính tuổi <b>{l.yearGZ}</b> ({l.y}), không phải năm {year}.</div>}
+      {l.leap && <div className="small">Tháng nhuận: lá số an theo quy ước nửa đầu tháng tính tháng trước, nửa sau tính tháng sau.</div>}
+      {hourOk && dt.getHours() === 23 && <div className="small">Giờ Tý muộn (23h–24h): đang tính theo ngày {day}/{month}. Một số trường phái tính sang ngày hôm sau.</div>}
+    </div>
   )
 }
 
@@ -85,6 +121,7 @@ export function BirthPanel({ initial, onSubmit, onCalendar }: { initial: BirthIn
             </div>
           </div>
         </div>
+        <LunarPreview b={b} />
         <div className="grid2" style={{ gap: 14 }}>
           <div className="field">
             <label htmlFor="f-prov">Nơi sinh</label>

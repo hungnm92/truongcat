@@ -1,5 +1,6 @@
 import { dayInfo, type DayInfo } from './calendar'
 import { DIA_CHI } from './vn'
+import { CAT_THAN, HUNG_SAT, THO_TU } from '../data/thansat'
 
 export type Activity = 'tongquat' | 'xuathanh' | 'dongtho' | 'khaitruong' | 'cuoihoi'
 
@@ -43,10 +44,24 @@ export function rateDay(y: number, m: number, d: number, act: Activity, yearChi?
   if (info.tamNuong) { score -= 2; warnings.push('Ngày Tam Nương') }
   if (info.nguyetKy) { score -= 2; warnings.push('Ngày Nguyệt Kỵ') }
   if (info.duongCongKy) { score -= 3; warnings.push('Dương Công Kỵ Nhật') }
+  for (const n of info.catThan) {
+    const e = CAT_THAN[n]
+    if (!e || (e.only && !e.only.includes(act))) continue
+    score += e.w * 0.6
+    reasons.push(e.vi)
+  }
+  for (const n of info.hungSat) {
+    const e = HUNG_SAT[n]
+    if (!e || (e.only && !e.only.includes(act))) continue
+    score += e.w * 0.6
+    warnings.push(e.note ? `${e.vi} (${e.note})` : e.vi)
+  }
+  if (THO_TU[info.lunar.m] === info.dayChi) { score -= 3; warnings.push('Thọ Tử (trăm việc kỵ)') }
   if (yearChi && DIA_CHI.indexOf(yearChi as never) >= 0 && info.chiXung === yearChi) {
     score -= 3; warnings.push(`Ngày xung tuổi ${yearChi}`)
   }
-  const level = score >= 5 ? 'Đại cát' : score >= 3 ? 'Cát' : score >= 0 ? 'Bình' : score >= -2 ? 'Hung' : 'Đại hung'
+  score = Math.round(score * 10) / 10
+  const level = score >= 6 ? 'Đại cát' : score >= 3 ? 'Cát' : score >= 0 ? 'Bình' : score >= -3 ? 'Hung' : 'Đại hung'
   return { info, score, level, reasons, warnings }
 }
 

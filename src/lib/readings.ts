@@ -2,6 +2,8 @@ import type { IFunctionalPalace as Palace } from 'iztro/lib/astro/FunctionalPala
 import { BRIGHTNESS_TEXT, CAT_TINH, CUC_TEXT, MAJOR_STARS, MUTAGEN_TEXT, PALACES, SAT_TINH } from '../data/stars'
 import { palaceByName, type Chart } from './chart'
 import { dayInfo } from './calendar'
+import { PALACE_KEY, STAR_PALACE, isDim } from '../data/starPalace'
+import { STAR_FIELDS, detectPatterns, type PatternHit } from '../data/patterns'
 
 export type Level = 'Rất tốt' | 'Tốt' | 'Trung bình' | 'Cần thận trọng'
 
@@ -80,7 +82,10 @@ export function readPalace(c: Chart, name: string): PalaceReading {
     const bright = BRIGHTNESS_TEXT[st.brightness ?? 'Bình'] ?? ''
     const who = vcd ? `${st.name} (mượn từ đối cung)` : st.name
     const mu = st.mutagen ? ` ${MUTAGEN_TEXT[st.mutagen] ?? ''}.` : ''
-    paragraphs.push(`${who} (${t.hanh}, ${bright}): ${lowerFirst(String(t[meta.field]))}.${mu}`)
+    const key = PALACE_KEY[name]
+    const pair = key ? STAR_PALACE[st.name]?.[key] : undefined
+    const specific = pair ? pair[isDim(st.brightness) ? 1 : 0] : `${lowerFirst(String(t[meta.field]))}.`
+    paragraphs.push(`${who} (${t.hanh}, ${bright}): ${specific}${mu}`)
   }
 
   const cat = [...p.minorStars].filter((s) => CAT_TINH.includes(s.name)).map((s) => s.name)
@@ -136,6 +141,8 @@ export interface Overview {
   look: string
   past: { year: number; age: number; text: string }[]
   gauge: string
+  patterns: PatternHit[]
+  personal: string[]
 }
 
 const YANG_BRANCH = ['Tý', 'Dần', 'Thìn', 'Ngọ', 'Thân', 'Tuất']
@@ -190,10 +197,6 @@ export function buildOverview(c: Chart): Overview {
   const forward = (c.input.gender === 'Nam') === (isYangStem(c.canNam))
   actions.push(`${isYangStem(c.canNam) ? 'Dương' : 'Âm'} ${c.input.gender} nên đại vận đi ${forward ? 'thuận' : 'nghịch'}: ${forward ? 'vận trải xuôi theo hướng tiến' : 'vận cần tính lùi bước, tích lũy trước khi tiến'}.`)
   if (thanPalace) actions.push(`Thân cư ${thanPalace.name}: về lâu dài, sức nặng cuộc đời nghiêng về ${PALACES[thanPalace.name]?.topic ?? ''}.`)
-  const j = c.input.journey
-  if (j.field) actions.push(`Bạn đang làm trong lĩnh vực "${j.field}": hãy đối chiếu với cung Quan Lộc và Tài Bạch ở tab 12 Cung để chọn hướng phát triển.`)
-  if (j.stage) actions.push(`Giai đoạn hiện tại "${j.stage}": tab Vận Hạn cho thấy từng cung trong năm ${c.input.viewYear}.`)
-  if (j.love === 'Đang yêu' || j.love === 'Độc thân') actions.push('Chuyện tình cảm xem ở cung Phu Thê; ưu tiên hiểu đối phương trước khi quyết định lâu dài.')
 
   // Âm dương: theo chi của các cung có sao + hành động của chính tinh
   let yang = 0, yin = 0
@@ -208,6 +211,8 @@ export function buildOverview(c: Chart): Overview {
   const nAll = allStars.length || 1
 
   const past = pastYears(c)
+  const patterns = detectPatterns(c)
+
   const name = mainNames.length ? joinNames(mainNames) : 'Vô Chính Diệu'
   const summary = mainNames.length
     ? `Mệnh có ${menh.majorStars.length ? name : `${name} (mượn đối cung)`} tại ${menh.earthlyBranch}. Nhìn tổng thể: ${mains.map((s) => MAJOR_STARS[s.name]?.core).filter(Boolean).join('; ')}.`
@@ -225,6 +230,8 @@ export function buildOverview(c: Chart): Overview {
     satRatio: Math.round((nSat / nAll) * 100),
     look: mains.map((s) => MAJOR_STARS[s.name]?.look).filter(Boolean).join('; '),
     past,
+    patterns,
+    personal: personalAdvice(c),
     gauge: Math.abs(yang - yin) / tot < 0.2 ? 'Âm dương khá cân bằng: có thể chuyển nhịp giữa hành động và quan sát.' : yang > yin ? 'Dương khí trội: thiên về chủ động, nhanh quyết.' : 'Âm khí trội: thiên về cân nhắc, kín đáo.',
   }
 }
@@ -354,4 +361,40 @@ export function readYear(c: Chart, year: number): YearReading {
     actions,
     menhPalace,
   }
+}
+
+// ---------- Lời khuyên theo "Hành trình nhân sinh" ----------
+
+export function personalAdvice(c: Chart): string[] {
+  const j = c.input.journey
+  const out: string[] = []
+  const y = c.input.viewYear
+  const yr = readYearLite(c, y)
+  const lv = (n: string) => yr[n] ?? levelOf(palaceScore(c, n))
+  const ql = palaceByName(c, 'Quan Lộc')
+  const qlStars = (ql.majorStars.length ? ql.majorStars : c.astro.surroundedPalaces('Quan Lộc' as never).opposite.majorStars).map((s) => s.name)
+  if (j.field && j.field !== 'Khác') {
+    const fit = qlStars.filter((s) => STAR_FIELDS[s]?.some((f) => j.field.startsWith(f)))
+    const suggested = Array.from(new Set(qlStars.flatMap((s) => STAR_FIELDS[s] ?? [])))
+    out.push(fit.length
+      ? `Lĩnh vực "${j.field}" hợp với ${fit.join(', ')} ở cung Quan Lộc – bạn đang đi đúng sở trường, nên đào sâu chuyên môn.`
+      : `Lĩnh vực "${j.field}" chưa trùng sở trường của cung Quan Lộc (${qlStars.join(', ') || 'vô chính diệu'}). Các mảng hợp hơn: ${suggested.join(', ') || 'linh hoạt'}; có thể phát triển kỹ năng phụ theo hướng này.`)
+  }
+  if (j.stage === 'Đang chuyển hướng') out.push(`Đang chuyển hướng: năm ${y} cung Quan Lộc ở mức "${lv('Quan Lộc')}", Thiên Di ở mức "${lv('Thiên Di')}". ${lv('Thiên Di') === 'Cần thận trọng' ? 'Nên chuẩn bị kỹ trước khi rời chỗ cũ.' : 'Thời điểm khá thuận để thử môi trường mới.'}`)
+  if (j.stage === 'Kinh doanh riêng') out.push(`Kinh doanh riêng: cung Tài Bạch năm ${y} ở mức "${lv('Tài Bạch')}". ${lv('Tài Bạch') === 'Cần thận trọng' ? 'Ưu tiên giữ dòng tiền, hạn chế vay.' : 'Có thể mở rộng có kiểm soát.'}`)
+  if (j.stage === 'Đang đi học') out.push(`Đang đi học: cung Phụ Mẫu (giấy tờ, thi cử) năm ${y} ở mức "${lv('Phụ Mẫu')}". Văn Xương, Văn Khúc ${['Văn Xương', 'Văn Khúc'].some((n) => palaceByName(c, 'Mệnh').minorStars.some((s) => s.name === n)) ? 'có mặt ở Mệnh – thuận học hành' : 'không ở Mệnh – cần phương pháp học đều đặn'}.`)
+  if (j.stage === 'Đã nghỉ hưu') out.push(`Tuổi nghỉ ngơi: chú trọng cung Tật Ách ("${lv('Tật Ách')}") và Phúc Đức ("${lv('Phúc Đức')}") – giữ sức khỏe và đời sống tinh thần.`)
+  if (j.love === 'Độc thân' || j.love === 'Đang yêu') out.push(`Tình cảm: cung Phu Thê năm ${y} ở mức "${lv('Phu Thê')}". ${['Rất tốt', 'Tốt'].includes(lv('Phu Thê')) ? 'Nhiều tín hiệu thuận để gặp gỡ hoặc tiến xa.' : 'Nên tìm hiểu kỹ, đừng vội quyết.'}`)
+  if (j.love === 'Đã kết hôn') out.push(`Hôn nhân: cung Phu Thê năm ${y} ở mức "${lv('Phu Thê')}". ${lv('Phu Thê') === 'Cần thận trọng' ? 'Dành thời gian lắng nghe nhau, tránh để chuyện nhỏ thành lớn.' : 'Gia đạo khá êm, hợp cùng lên kế hoạch chung.'}`)
+  if (j.love === 'Đã ly hôn' || j.love === 'Góa') out.push(`Giai đoạn chữa lành: cung Phúc Đức ("${lv('Phúc Đức')}") là điểm tựa tinh thần; tìm niềm vui từ sở thích, cộng đồng.`)
+  if (j.children === 'Đang mong con') out.push(`Mong con: cung Tử Tức năm ${y} ở mức "${lv('Tử Nữ')}". ${['Rất tốt', 'Tốt'].includes(lv('Tử Nữ')) ? 'Tín hiệu khá thuận.' : 'Nên chăm sóc sức khỏe hai vợ chồng, kiên nhẫn.'}`)
+  if (j.children === 'Đã có con') out.push(`Con cái: cung Tử Tức gốc ở mức "${levelOf(palaceScore(c, 'Tử Nữ'))}"; năm ${y} ở mức "${lv('Tử Nữ')}".`)
+  return out
+}
+
+function readYearLite(c: Chart, year: number): Record<string, Level> {
+  try {
+    const r = readYear(c, year)
+    return Object.fromEntries(r.items.map((i) => [i.palace, i.level]))
+  } catch { return {} }
 }

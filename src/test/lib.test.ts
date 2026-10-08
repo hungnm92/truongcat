@@ -165,3 +165,40 @@ describe('kỳ môn', () => {
     expect(qimenChart(new Date(2026, 11, 25, 9)).duong).toBe(true)
   })
 })
+
+import { detectPatterns } from '../data/patterns'
+import { personalAdvice } from '../lib/readings'
+describe('cách cục và cá nhân hóa', () => {
+  it('lá số mẫu có Nhật Nguyệt đồng cung (Mệnh Sửu có Thái Dương, Thái Âm)', () => {
+    const names = detectPatterns(buildChart(base)).map((p) => p.name)
+    expect(names).toContain('Nhật Nguyệt đồng cung')
+  })
+  it('lời luận cung dùng câu riêng theo sao', () => {
+    const r = readPalace(buildChart(base), 'Quan Lộc')
+    expect(r.paragraphs.join(' ')).toMatch(/Thiên Lương/)
+  })
+  it('lời khuyên theo hoàn cảnh', () => {
+    const c = buildChart({ ...base, journey: { love: 'Đang yêu', children: '', field: 'Giáo dục', stage: 'Đang chuyển hướng' } })
+    const a = personalAdvice(c)
+    expect(a.length).toBe(3)
+    expect(a[0]).toMatch(/Giáo dục/)
+  })
+})
+
+import { annualStar, kiemDo, vanOfYear } from '../lib/fengshui'
+describe('huyền không nâng cao', () => {
+  it('sao lưu niên: 2024 Tam Bích, 2025 Nhị Hắc, 2026 Nhất Bạch, 2027 Cửu Tử', () => {
+    expect([2024, 2025, 2026, 2027].map(annualStar)).toEqual([3, 2, 1, 9])
+  })
+  it('vận theo năm xây', () => {
+    expect([1995, 2010, 2024, 2030].map(vanOfYear)).toEqual([7, 8, 9, 9])
+  })
+  it('kiêm hướng > 4.5° thì dùng thế quái và đổi sao nhập trung', () => {
+    expect(kiemDo(0)).toBe(0)
+    expect(kiemDo(6)).toBe(6)
+    const chinh = huyenKhong(0, 9, 2026), kiem = huyenKhong(6, 9, 2026)
+    expect(chinh.theQuai).toBe(false)
+    expect(kiem.theQuai).toBe(true)
+    expect(kiem.tonSon).toBe('Tý')
+  })
+})

@@ -111,52 +111,97 @@ function fly(center: number, forward: boolean): Record<Cell, number> {
 }
 
 export const VAN = 9
-export const VAN_LABEL = 'Vận 9 (2024–2043)'
+export const vanOfYear = (y: number) => (y < 1984 ? 6 : y < 2004 ? 7 : y < 2024 ? 8 : 9)
+export const vanLabel = (v: number) => `Vận ${v} (${1864 + (v - 1) * 20}–${1883 + (v - 1) * 20})`
+export const VAN_LABEL = vanLabel(VAN)
+const wrap9 = (n: number) => ((n - 1) % 9 + 9) % 9 + 1
 
-/** Sơn thuộc cung cell có cùng nguyên với sơn gốc, dùng định chiều bay. */
-function polarityFor(star: number, originMountain: string): boolean {
-  if (star === 5) return SON_AD[originMountain] === 1
-  const cell = STAR_CELL[star]
-  const quai = CELL_QUAI[cell as Exclude<Cell, 'C'>]
-  const origin = SON_NGUYEN[originMountain]
-  const m = Object.keys(SON_QUAI).find((k) => SON_QUAI[k] === quai && SON_NGUYEN[k] === origin)!
-  return SON_AD[m] === 1
+// Thế quái (替卦): sao thay thế theo sơn.
+const THE_QUAI: Record<string, number> = {
+  Tý: 1, Quý: 1, Giáp: 1, Thân: 1,
+  Nhâm: 2, Mão: 2, Ất: 2, Mùi: 2, Khôn: 2,
+  Tuất: 6, Càn: 6, Hợi: 6, Thìn: 6, Tốn: 6, Tỵ: 6,
+  Dậu: 7, Tân: 7, Sửu: 7, Cấn: 7, Bính: 7,
+  Dần: 9, Ngọ: 9, Canh: 9, Đinh: 9,
 }
 
-export interface HKCell { van: number; son: number; huong: number }
+/** Sơn trong cung của sao `star` có cùng nguyên với sơn gốc. */
+function partnerMountain(star: number, originMountain: string) {
+  const quai = CELL_QUAI[STAR_CELL[star] as Exclude<Cell, 'C'>]
+  const origin = SON_NGUYEN[originMountain]
+  return Object.keys(SON_QUAI).find((k) => SON_QUAI[k] === quai && SON_NGUYEN[k] === origin)!
+}
+
+/** Sao nhập trung và chiều bay (có/không thế quái). */
+function entering(star: number, originMountain: string, theQuai: boolean): { center: number; forward: boolean } {
+  if (star === 5) return { center: 5, forward: SON_AD[originMountain] === 1 }
+  const m = partnerMountain(star, originMountain)
+  return { center: theQuai ? THE_QUAI[m] : star, forward: SON_AD[m] === 1 }
+}
+
+/** Độ lệch khỏi chính giữa sơn: > 4.5° coi là kiêm hướng. */
+export const kiemDo = (deg: number) => {
+  const d = (((deg % 360) + 360) % 360 + 7.5) % 15 - 7.5
+  return Math.round(d * 10) / 10
+}
+
+/** Sao lưu niên nhập trung (tính theo năm, đổi tại Lập Xuân). */
+export const annualStar = (year: number) => wrap9(9 - (((year - 2000) % 9) + 9) % 9)
+
+export interface HKCell { van: number; son: number; huong: number; year: number }
 export interface HKChart {
   tonSon: string
   huong: string
+  van: number
+  year: number
+  theQuai: boolean
+  kiem: number
   cells: Record<Cell, HKCell>
   pattern: string
   tonSonQuai: Quai
+  annualWarn: string[]
 }
 
-export function huyenKhong(degree: number): HKChart {
+export function huyenKhong(degree: number, vanNo = VAN, year = new Date().getFullYear()): HKChart {
   const son = sonOfDegree(degree)
   const huong = sonOfDegree(oppositeDegree(degree))
-  const van = fly(VAN, true)
-  const sonStar = van[QUAI_CELL[SON_QUAI[son]]]
-  const huongStar = van[QUAI_CELL[SON_QUAI[huong]]]
-  const sonB = fly(sonStar, polarityFor(sonStar, son))
-  const huongB = fly(huongStar, polarityFor(huongStar, huong))
+  const kiem = kiemDo(degree)
+  const theQuai = Math.abs(kiem) > 4.5
+  const van = fly(vanNo, true)
+  const sE = entering(van[QUAI_CELL[SON_QUAI[son]]], son, theQuai)
+  const hE = entering(van[QUAI_CELL[SON_QUAI[huong]]], huong, theQuai)
+  const sonB = fly(sE.center, sE.forward)
+  const huongB = fly(hE.center, hE.forward)
+  const yearB = fly(annualStar(year), true)
   const cells = {} as Record<Cell, HKCell>
-  for (const c of CELLS) cells[c] = { van: van[c], son: sonB[c], huong: huongB[c] }
+  for (const c of CELLS) cells[c] = { van: van[c], son: sonB[c], huong: huongB[c], year: yearB[c] }
   const sonCell = QUAI_CELL[SON_QUAI[son]], huongCell = QUAI_CELL[SON_QUAI[huong]]
   const ss = cells[sonCell], hs = cells[huongCell]
-  // Cách cục theo vị trí của sao vượng (9) trên sơn tinh/hướng tinh.
+  const V = vanNo
   let pattern = 'Cách cục thường, không có sao vượng nổi bật ở tọa hướng'
-  if (ss.son === VAN && hs.huong === VAN) pattern = 'Vượng sơn vượng hướng (cát: người và tài đều thuận)'
-  else if (ss.huong === VAN && hs.son === VAN) pattern = 'Thượng sơn hạ thủy (sơn hướng đảo ngược, cần cẩn trọng khi dùng)'
-  else if (ss.son === VAN && ss.huong === VAN) pattern = 'Song tinh hội tọa (tốt cho sức khỏe, nhân đinh; kém về tài lộc)'
-  else if (hs.son === VAN && hs.huong === VAN) pattern = 'Song tinh hội hướng (tốt cho tài lộc; kém về nhân đinh)'
-  else if (ss.son === VAN) pattern = 'Sơn tinh đắc vượng (hợp tựa lưng vững, thuận về người)'
-  else if (hs.huong === VAN) pattern = 'Hướng tinh đắc vượng (hợp mặt trước thoáng, thuận về tài)'
-  return { tonSon: son, huong, cells, pattern, tonSonQuai: SON_QUAI[son] }
+  if (ss.son === V && hs.huong === V) pattern = 'Vượng sơn vượng hướng (cát: người và tài đều thuận)'
+  else if (ss.huong === V && hs.son === V) pattern = 'Thượng sơn hạ thủy (sơn hướng đảo ngược, cần cẩn trọng khi dùng)'
+  else if (ss.son === V && ss.huong === V) pattern = 'Song tinh hội tọa (tốt cho sức khỏe, nhân đinh; kém về tài lộc)'
+  else if (hs.son === V && hs.huong === V) pattern = 'Song tinh hội hướng (tốt cho tài lộc; kém về nhân đinh)'
+  else if (ss.son === V) pattern = 'Sơn tinh đắc vượng (hợp tựa lưng vững, thuận về người)'
+  else if (hs.huong === V) pattern = 'Hướng tinh đắc vượng (hợp mặt trước thoáng, thuận về tài)'
+  const dirName: Record<Cell, string> = { N: 'Bắc', NE: 'Đông Bắc', E: 'Đông', SE: 'Đông Nam', S: 'Nam', SW: 'Tây Nam', W: 'Tây', NW: 'Tây Bắc', C: 'Trung cung' }
+  const annualWarn: string[] = []
+  const at = (n: number) => CELLS.find((c) => cells[c].year === n)!
+  annualWarn.push(`Năm ${year}: Ngũ Hoàng (5) bay đến ${dirName[at(5)]} – tránh động thổ, sửa chữa lớn ở khu vực này.`)
+  annualWarn.push(`Nhị Hắc (2, bệnh phù) ở ${dirName[at(2)]} – nên giữ yên tĩnh, có thể đặt vật kim loại.`)
+  annualWarn.push(`Sao tốt của năm: Nhất Bạch ở ${dirName[at(1)]}, Bát Bạch ở ${dirName[at(8)]}, Cửu Tử ở ${dirName[at(9)]} – hợp đặt bàn làm việc, cửa đi.`)
+  return { tonSon: son, huong, van: vanNo, year, theQuai, kiem, cells, pattern, tonSonQuai: SON_QUAI[son], annualWarn }
 }
 
 export type StarTone = 'cat' | 'binh' | 'hung'
-export const starTone = (s: number): StarTone => ([1, 8, 9].includes(s) ? 'cat' : [4, 6].includes(s) ? 'binh' : 'hung')
+/** Sao cát theo vận: vượng (V), sinh (V+1, V+2); bình: 4, 6 và thoái khí; còn lại hung. */
+export const starTone = (s: number, vanNo = VAN): StarTone => {
+  const good = [vanNo, wrap9(vanNo + 1), wrap9(vanNo + 2)]
+  if (good.includes(s)) return 'cat'
+  if ([4, 6, wrap9(vanNo - 1)].includes(s) && s !== 5 && s !== 2) return 'binh'
+  return 'hung'
+}
 export const STAR_NOTE: Record<number, string> = {
   1: 'Nhất Bạch (Tham Lang): quý nhân, đào hoa, thông minh',
   2: 'Nhị Hắc (Cự Môn): bệnh khí, hao tổn',
@@ -164,9 +209,9 @@ export const STAR_NOTE: Record<number, string> = {
   4: 'Tứ Lục (Văn Khúc): học hành, văn chương',
   5: 'Ngũ Hoàng (Liêm Trinh): đại sát, tai ương',
   6: 'Lục Bạch (Võ Khúc): quyền uy, cơ hội',
-  7: 'Thất Xích (Phá Quân): phá tán, trộm cướp (vận 9 đã suy)',
-  8: 'Bát Bạch (Tả Phù): tài lộc, nhà đất (đang thoái khí, vẫn tốt)',
-  9: 'Cửu Tử (Hữu Bật): vượng nhất vận này, hỷ sự',
+  7: 'Thất Xích (Phá Quân): phá tán, khẩu thiệt',
+  8: 'Bát Bạch (Tả Phù): tài lộc, nhà đất',
+  9: 'Cửu Tử (Hữu Bật): hỷ sự, danh tiếng',
 }
 
 export type Purpose = 'nha' | 'banlamviec' | 'giuong'
@@ -183,19 +228,19 @@ export interface FSAdvice {
   lines: string[]
 }
 
-export function adviseDirection(degree: number, purpose: Purpose, menh: Quai): FSAdvice {
+export function adviseDirection(degree: number, purpose: Purpose, menh: Quai, vanNo = VAN, year = new Date().getFullYear()): FSAdvice {
   const q = quaiOfDegree(degree)
   const table = batTrach(menh)
   const dirQuality = BAT_TRACH_NAMES.find((s) => table[s].quai === q)!
   const good = TRACH_GOOD.includes(dirQuality)
-  const hk = huyenKhong(purpose === 'nha' ? oppositeDegree(degree) : degree)
+  const hk = huyenKhong(purpose === 'nha' ? oppositeDegree(degree) : degree, vanNo, year)
   const lines: string[] = []
   const what = purpose === 'nha' ? 'hướng nhà' : purpose === 'banlamviec' ? 'hướng ngồi (mặt nhìn về)' : 'hướng đầu giường'
   lines.push(`${what} ${QUAI_DIR[q]} (${sonOfDegree(degree)}, ${Math.round(degree)}°) rơi vào ${dirQuality} với mệnh ${menh}: ${TRACH_MEANING[dirQuality]}.`)
   if (purpose === 'banlamviec') lines.push('Nên ưu tiên Sinh Khí cho tiền tài, Thiên Y khi cần ổn định sức khỏe, Diên Niên cho quan hệ đồng nghiệp.')
   if (purpose === 'giuong') lines.push('Chọn hướng đầu giường Phục Vị hoặc Thiên Y để ngủ sâu; tránh Tuyệt Mệnh, Ngũ Quỷ.')
   if (purpose === 'nha') {
-    lines.push(`Huyền Không ${VAN_LABEL}: tọa ${hk.tonSon} hướng ${hk.huong}. ${hk.pattern}.`)
+    lines.push(`Huyền Không ${vanLabel(hk.van)}: tọa ${hk.tonSon} hướng ${hk.huong}${hk.theQuai ? ` (kiêm hướng ${Math.abs(hk.kiem)}° – dùng Thế quái)` : ''}. ${hk.pattern}.`)
     const hs = hk.cells[QUAI_CELL[SON_QUAI[hk.huong]]]
     lines.push(`Tại cung hướng: hướng tinh ${hs.huong} (${STAR_NOTE[hs.huong]}); sơn tinh ${hs.son} (${STAR_NOTE[hs.son]}).`)
   }

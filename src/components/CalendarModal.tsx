@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { dayInfo, lunarOfSolar } from '../lib/calendar'
 import { THU, pad2 } from '../lib/vn'
+import { CAT_THAN, HUNG_SAT, THO_TU } from '../data/thansat'
 
 export function CalendarModal({ onClose }: { onClose: () => void }) {
   const t = new Date()
@@ -67,6 +68,21 @@ export function CalendarModal({ onClose }: { onClose: () => void }) {
             {info.tamNuong && <span className="chip bad">Tam Nương</span>}
             {info.nguyetKy && <span className="chip bad">Nguyệt Kỵ</span>}
             {info.duongCongKy && <span className="chip bad">Dương Công Kỵ</span>}
+            {THO_TU[info.lunar.m] === info.dayChi && <span className="chip bad">Thọ Tử</span>}
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <div className="label">Giờ hoàng đạo</div>
+            <div>{info.gioHoangDao.map((g) => <span key={g.chi} className="chip good">{g.chi} ({g.from}–{g.to})</span>)}</div>
+          </div>
+          <div className="grid2" style={{ marginTop: 10 }}>
+            <div>
+              <div className="label" style={{ color: 'var(--good)' }}>Cát thần</div>
+              <div className="small" style={{ color: 'var(--ink)' }}>{info.catThan.map((n) => CAT_THAN[n]?.vi).filter(Boolean).join(', ') || '—'}</div>
+            </div>
+            <div>
+              <div className="label" style={{ color: 'var(--bad)' }}>Hung sát</div>
+              <div className="small" style={{ color: 'var(--ink)' }}>{info.hungSat.map((n) => HUNG_SAT[n]?.vi).filter(Boolean).join(', ') || '—'}</div>
+            </div>
           </div>
         </div>
       </div>

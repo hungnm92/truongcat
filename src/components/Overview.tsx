@@ -40,6 +40,26 @@ export function Overview({ chart }: { chart: Chart }) {
             <div className="card tinted-red"><div className="col-title r">△ Điều cần thận trọng</div><ul className="dots">{ov.cautions.map((t, i) => <li key={i}>{t}</li>)}</ul></div>
             <div className="card tinted-gold"><div className="col-title k">→ Hành động thực tế</div><ul className="dots">{ov.actions.map((t, i) => <li key={i}>{t}</li>)}</ul></div>
           </div>
+          <div className={ov.personal.length ? 'grid2' : ''} style={{ marginBottom: 16 }}>
+            <div className="card">
+              <div className="eyebrow">Cách cục nhận diện</div>
+              <h3>Thế đứng của lá số</h3>
+              {ov.patterns.length === 0 && <p className="small">Không có cách cục kinh điển nổi bật; lá số thiên về sự cân bằng, thành bại do nỗ lực hằng ngày.</p>}
+              {ov.patterns.map((p) => (
+                <div key={p.name} style={{ marginBottom: 10 }}>
+                  <span className={`chip ${p.tone === 'cat' ? 'good' : p.tone === 'hung' ? 'bad' : 'gold'}`}>{p.tone === 'cat' ? '✦' : p.tone === 'hung' ? '△' : '◆'} {p.name}</span>
+                  <div className="small" style={{ color: 'var(--ink)', marginTop: 2 }}>{p.text}</div>
+                </div>
+              ))}
+            </div>
+            {ov.personal.length > 0 && (
+              <div className="card tinted-gold">
+                <div className="eyebrow">Theo hành trình nhân sinh</div>
+                <h3>Lời khuyên cho hoàn cảnh hiện tại</h3>
+                <ul className="dots">{ov.personal.map((t, i) => <li key={i}>{t}</li>)}</ul>
+              </div>
+            )}
+          </div>
           <div className="grid2">
             <div className="card">
               <div className="eyebrow">Chỉ số trực quan</div>
@@ -70,11 +90,11 @@ export function Overview({ chart }: { chart: Chart }) {
         <div className="card">
           <div className="eyebrow">Trạch nhật</div>
           <h2>Ngày hợp để {ACTIVITY_LABEL[act].toLowerCase()}</h2>
-          <p className="small">45 ngày tới, chấm theo Trực, Hoàng/Hắc đạo, nhị thập bát tú, các ngày kỵ và xung tuổi {chart.chiNam} của bạn.</p>
+          <p className="small">45 ngày tới, chấm theo Trực, Hoàng/Hắc đạo, nhị thập bát tú, cát thần – hung sát riêng cho việc này, Thọ Tử, Tam Nương, Nguyệt Kỵ và xung tuổi {chart.chiNam} của bạn.</p>
           {best.length > 0 && <div style={{ marginBottom: 10 }}><b className="small">Gợi ý nổi bật: </b>{best.map((d) => <span key={`${d.info.solar.m}-${d.info.solar.d}`} className="chip good">{pad2(d.info.solar.d)}/{pad2(d.info.solar.m)} ({d.level})</span>)}</div>}
           <div style={{ overflowX: 'auto' }}>
             <table className="t">
-              <thead><tr><th>Ngày</th><th>Âm lịch</th><th>Can chi</th><th>Đánh giá</th><th>Ghi chú</th></tr></thead>
+              <thead><tr><th>Ngày</th><th>Âm lịch</th><th>Can chi</th><th>Đánh giá</th><th>Thần sát</th><th>Giờ tốt</th></tr></thead>
               <tbody>
                 {days.map((r) => (
                   <tr key={`${r.info.solar.y}-${r.info.solar.m}-${r.info.solar.d}`}>
@@ -82,7 +102,8 @@ export function Overview({ chart }: { chart: Chart }) {
                     <td>{r.info.lunar.d}/{r.info.lunar.m}</td>
                     <td>{r.info.lunar.dayGZ}</td>
                     <td><span className={`chip ${r.score >= 3 ? 'good' : r.score < 0 ? 'bad' : ''}`}>{r.level}</span></td>
-                    <td className="small">{[...r.reasons.slice(0, 2), ...r.warnings].join(' · ')}</td>
+                    <td className="small"><span style={{ color: 'var(--good)' }}>{r.reasons.slice(0, 4).join(', ')}</span>{r.warnings.length > 0 && <><br /><span style={{ color: 'var(--bad)' }}>{r.warnings.join(', ')}</span></>}</td>
+                    <td className="small">{r.score >= 0 ? r.info.gioHoangDao.map((g) => g.chi).join(', ') : '—'}</td>
                   </tr>
                 ))}
               </tbody>

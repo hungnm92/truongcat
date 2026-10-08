@@ -11,7 +11,7 @@ const WEATHER: Record<number, [string, string]> = {
   82: ['⛈️', 'Mưa rào mạnh'], 95: ['⛈️', 'Dông'], 96: ['⛈️', 'Dông'], 99: ['⛈️', 'Dông'],
 }
 
-export function Header({ province }: { province: string }) {
+export function Header({ province, onCalendar }: { province: string; onCalendar?: () => void }) {
   const now = new Date()
   const d = dayInfo(now.getFullYear(), now.getMonth() + 1, now.getDate())
   const [w, setW] = useState<{ t: number; code: number } | null>(null)
@@ -56,6 +56,8 @@ export function Header({ province }: { province: string }) {
               <span className="chip">Trực {d.truc}</span>
               <span className={`chip ${d.thanSat.hoangDao ? 'good' : 'bad'}`}>{d.thanSat.name}</span>
             </div>
+            <div className="small" style={{ marginTop: 2 }}>Giờ hoàng đạo: {d.gioHoangDao.map((g) => g.chi).join(', ')}</div>
+            {onCalendar && <button className="btn ghost sm" style={{ marginTop: 6 }} onClick={onCalendar}>▦ Lịch vạn niên & thần sát</button>}
           </div>
         </div>
       </div>

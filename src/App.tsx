@@ -79,7 +79,7 @@ export default function App() {
   return (
     <>
       <div className="wrap">
-        <Header province={input?.province ?? 'Hà Nội'} />
+        <Header province={input?.province ?? 'Hà Nội'} onCalendar={() => setCal(true)} />
 
         {showForm && (
           <BirthPanel

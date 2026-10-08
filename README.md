@@ -33,8 +33,16 @@ npm run build
 - Toàn bộ văn bản luận giải (`src/data/*`, `src/lib/readings.ts`, `src/lib/iching.ts`) được biên soạn riêng,
   không sao chép từ website nào. Thương hiệu, logo và giao diện là của dự án này.
 
+## Dữ liệu luận giải (có thể tự sửa)
+
+- `src/data/stars.ts`: tính chất 14 chính tinh, ý nghĩa 12 cung.
+- `src/data/starPalace.ts`: lời luận từng chính tinh tại từng cung, khi sáng và khi mờ.
+- `src/data/patterns.ts`: khoảng 30 cách cục (điều kiện + diễn giải) và nhóm nghề hợp với từng sao.
+- `src/data/thansat.ts`: cát thần / hung sát ngày, trọng số và việc bị ảnh hưởng.
+- `src/data/hexagrams.ts`: 64 quẻ.
+
 ## Giới hạn đã biết
 
-- Huyền Không dùng Vận 9 và chưa áp dụng "thế quái", mang tính tham khảo.
+- Huyền Không có vận 6–9 theo năm xây, thế quái khi kiêm hướng > 4.5°, phi tinh lưu niên; chưa có thành môn, đả kiếp.
 - Kỳ Môn dùng phép sách bổ (không xét siêu thần, nhuận kỳ); nên coi là tham khảo.
 - Luận giải là mô hình quy tắc, không phải dự đoán.
