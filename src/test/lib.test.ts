@@ -202,3 +202,73 @@ describe('huyền không nâng cao', () => {
     expect(kiem.tonSon).toBe('Tý')
   })
 })
+
+import { coinBacksToLine, timeLines } from '../lib/iching'
+describe('lục hào – đối chiếu quẻ mẫu hocvienlyso (23/9/2025 11:12, Bát Thuần Khôn → Lôi Sơn Tiểu Quá)', () => {
+  const r = interpret('Bán nhà', [8, 8, 6, 6, 8, 8], new Date(2025, 8, 23, 11, 12), 'Nam')
+  const L = (pos: number) => r.lines[pos - 1]
+  it('thông tin thời gian', () => {
+    expect(r.ngayThang.hourGZ).toBe('Nhâm Ngọ')
+    expect(r.ngayThang.dayGZ).toBe('Ất Mùi')
+    expect(r.ngayThang.monthGZ).toBe('Ất Dậu')
+    expect(r.ngayThang.yearGZ).toBe('Ất Tỵ')
+    expect(r.ngayThang.jieqi).toBe('Thu Phân')
+    expect(r.ngayThang.tuanKhong).toEqual(['Thìn', 'Tỵ'])
+  })
+  it('quẻ chủ và quẻ biến', () => {
+    expect(r.main.name).toBe('Thuần Khôn')
+    expect(r.main.xungHop).toBe('Lục xung')
+    expect(r.changed?.name).toBe('Lôi Sơn Tiểu Quá')
+    expect(r.changed?.cung).toBe('Đoài')
+    expect(r.changed?.kind).toBe('Du Hồn')
+  })
+  it('can chi, lục thân, vượng suy, thế ứng của quẻ chủ', () => {
+    expect([6, 5, 4, 3, 2, 1].map((p) => `${L(p).can} ${L(p).chi}`)).toEqual(['Quý Dậu', 'Quý Hợi', 'Quý Sửu', 'Ất Mão', 'Ất Tỵ', 'Ất Mùi'])
+    expect([6, 5, 4, 3, 2, 1].map((p) => L(p).lucThan)).toEqual(['Tử Tôn', 'Thê Tài', 'Huynh Đệ', 'Quan Quỷ', 'Phụ Mẫu', 'Huynh Đệ'])
+    expect([6, 5, 4, 3, 2, 1].map((p) => L(p).vuongSuy)).toEqual(['Vượng', 'Tướng', 'Hưu', 'Tử', 'Tù', 'Hưu'])
+    expect(L(6).the).toBe(true)
+    expect(L(3).ung).toBe(true)
+    expect(L(2).tuanKhong).toBe(true)
+  })
+  it('quái thân Hợi, lộc Mão, mã Tỵ', () => {
+    expect(L(5).quaiThan).toBe(true)
+    expect(L(3).loc).toBe(true)
+    expect(L(2).ma).toBe(true)
+    expect(r.lines.filter((l) => l.quy || l.dao)).toHaveLength(0)
+  })
+  it('quẻ biến: can chi, lục thân theo cung Khôn, vượng suy, tuần không, quý nhân', () => {
+    const c = r.changedLines!
+    expect([5, 4, 3, 2, 1, 0].map((i) => `${c[i].can} ${c[i].chi}`)).toEqual(['Canh Tuất', 'Canh Thân', 'Canh Ngọ', 'Bính Thân', 'Bính Ngọ', 'Bính Thìn'])
+    expect([5, 4, 3, 2, 1, 0].map((i) => c[i].lucThan)).toEqual(['Huynh Đệ', 'Tử Tôn', 'Phụ Mẫu', 'Tử Tôn', 'Phụ Mẫu', 'Huynh Đệ'])
+    expect([5, 4, 3, 2, 1, 0].map((i) => c[i].vuongSuy)).toEqual(['Hưu', 'Vượng', 'Tù', 'Vượng', 'Tù', 'Hưu'])
+    expect(c[0].tuanKhong).toBe(true)
+    expect(c[4].quy && c[2].quy).toBe(true)
+  })
+  it('lục thú', () => {
+    expect(r.lines.map((l) => l.lucThu)).toEqual(['Thanh Long', 'Chu Tước', 'Câu Trần', 'Đằng Xà', 'Bạch Hổ', 'Huyền Vũ'])
+  })
+  it('chọn việc cần xem: bán nhà lấy Thê Tài', () => {
+    expect(r.topic.dung).toBe('Thê Tài')
+    expect(interpret('x', [8, 8, 6, 6, 8, 8], new Date(2025, 8, 23, 11, 12), 'Nam', 'nha-o').topic.dung).toBe('Phụ Mẫu')
+  })
+})
+
+describe('phục thần, biến hào, cách lập quẻ', () => {
+  it('Thiên Phong Cấu (Càn cung) thiếu Thê Tài → phục Dần dưới hào 2', () => {
+    // Cấu: hạ Tốn (0,1,1), thượng Càn
+    const r = interpret('tiền', [8, 7, 7, 7, 7, 7], new Date(2026, 9, 7, 10))
+    expect(r.main.name).toBe('Thiên Phong Cấu')
+    const p = r.lines.find((l) => l.phuc)
+    expect(p?.phuc?.lucThan).toBe('Thê Tài')
+    expect(p?.phuc?.chi).toBe('Dần')
+    expect(p?.pos).toBe(2)
+    expect(r.dungThan?.phuc).toBe(true)
+  })
+  it('xu: 1 lưng dương, 2 lưng âm, 3 lưng dương động, 0 lưng âm động', () => {
+    expect([1, 2, 3, 0].map(coinBacksToLine)).toEqual([7, 8, 9, 6])
+  })
+  it('Mai Hoa theo thời gian luôn có đúng 1 hào động', () => {
+    const t = timeLines(new Date(2026, 9, 9, 10, 0))
+    expect(t.values.filter((v) => v === 6 || v === 9)).toHaveLength(1)
+  })
+})

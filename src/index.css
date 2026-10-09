@@ -346,3 +346,24 @@ input::placeholder, textarea::placeholder { color: #c4b89c; font-weight: 400; op
 .box input[type=number]:focus { box-shadow: none; }
 .box input[type=number]::-webkit-inner-spin-button, .box input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .box input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+/* ---------- trang dịch quái ---------- */
+.que-sheet table.kv { border-collapse: collapse; margin: 8px 0; font-size: .92rem; }
+.que-sheet table.kv td { padding: 3px 14px 3px 0; vertical-align: top; }
+.que-sheet table.kv td:first-child { color: var(--muted); white-space: nowrap; }
+.que-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .que-grid { grid-template-columns: 1fr; } }
+.hexcard { text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 10px 0; margin-bottom: 8px; }
+.hexname { font-family: var(--serif); font-weight: 700; color: var(--red); letter-spacing: .06em; text-transform: uppercase; }
+.ltable { overflow-x: auto; }
+.ltable table.t td, .ltable table.t th { white-space: nowrap; padding: 6px 7px; }
+.ltable tr.mv td { color: var(--bad); font-weight: 600; }
+.ltable tr.dung td { background: #fbf2db; }
+.ltable td.mk { color: var(--red); font-weight: 700; }
+.glyph { display: inline-flex; gap: 4px; width: 34px; vertical-align: middle; }
+.glyph i { height: 5px; flex: 1; background: var(--blue); border-radius: 1px; }
+.glyph.yang { gap: 0; } .glyph.yang i:nth-child(2) { display: none; }
+.glyph.moving i { background: var(--bad); }
+.coins { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+@media (max-width: 760px) { .coins { grid-template-columns: 1fr 1fr; } }
+.dial-wrap { max-width: 560px; margin: 0 auto; }
+.dial { width: 100%; height: auto; display: block; font-family: 'Be Vietnam Pro', sans-serif; }

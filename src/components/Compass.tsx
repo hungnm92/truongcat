@@ -5,6 +5,7 @@ import {
 } from '../lib/fengshui'
 import type { Chart } from '../lib/chart'
 import { lunarOfSolar } from '../lib/calendar'
+import { FlyingStarDial } from './FlyingStarDial'
 
 const GRID: { cell: Cell; label: string }[] = [
   { cell: 'SE', label: 'Đông Nam' }, { cell: 'S', label: 'Nam' }, { cell: 'SW', label: 'Tây Nam' },
@@ -131,6 +132,9 @@ export function Compass({ chart }: { chart: Chart }) {
         <div className="card" style={{ marginTop: 14 }}>
           <h3>Phi tinh {advice.hk.pattern ? '· ' + advice.hk.pattern : ''}</h3>
           <p className="small">Tọa {advice.hk.tonSon} hướng {advice.hk.huong} · {vanLabel(advice.hk.van)}{advice.hk.theQuai ? ` · kiêm ${Math.abs(advice.hk.kiem)}°, dùng Thế quái` : ''}. Mỗi ô: sao vận (lớn), sơn tinh · hướng tinh, và sao lưu niên {advice.hk.year}.</p>
+          <FlyingStarDial hk={advice.hk} facing={applied ?? deg} />
+          <details style={{ marginTop: 10 }}>
+            <summary className="small" style={{ cursor: 'pointer' }}>Xem dạng bảng 9 cung</summary>
           <div className="hk">
             {GRID.map((g) => {
               const c = advice.hk.cells[g.cell]
@@ -144,6 +148,7 @@ export function Compass({ chart }: { chart: Chart }) {
               )
             })}
           </div>
+          </details>
           <ul className="dots" style={{ marginTop: 10 }}>{advice.hk.annualWarn.map((t, i) => <li key={i}>{t}</li>)}</ul>
           <p className="small">Xanh: sao đương vận và sinh khí · Xám: bình · Đỏ: sao suy/sát. Thế quái tự áp dụng khi hướng lệch quá 4.5° khỏi chính giữa sơn. Kết quả là tham khảo; nên khảo sát thực địa trước khi quyết định lớn.</p>
         </div>
