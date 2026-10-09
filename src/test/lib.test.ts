@@ -272,3 +272,47 @@ describe('phục thần, biến hào, cách lập quẻ', () => {
     expect(t.values.filter((v) => v === 6 || v === 9)).toHaveLength(1)
   })
 })
+
+import { compassDeg, dirOfDeg, houseCenter, nineGrid } from '../lib/plan'
+describe('mặt bằng: tâm nhà, cửu cung, khuyết góc', () => {
+  const frame = { x: 0, y: 0, w: 60, h: 118 } // nhà 6 x 11.8m, cửa ở cạnh dưới
+  it('tâm hình chữ nhật', () => {
+    expect(houseCenter(frame, [], 'rect')).toEqual({ x: 30, y: 59 })
+  })
+  it('trọng tâm lệch khỏi góc khuyết', () => {
+    const c = houseCenter(frame, [{ x: 30, y: 0, w: 30, h: 20 }], 'centroid')
+    expect(c.x).toBeLessThan(30)
+    expect(c.y).toBeGreaterThan(59)
+  })
+  it('nhà hướng Nam (180°): cạnh dưới là Nam, cạnh trên là Bắc, bên trái là Tây, bên phải là Đông (như bản đồ)', () => {
+    const ctr = { x: 30, y: 59 }
+    expect(dirOfDeg(compassDeg({ x: 30, y: 118 }, ctr, 180))).toBe('S')
+    expect(dirOfDeg(compassDeg({ x: 30, y: 0 }, ctr, 180))).toBe('N')
+    expect(dirOfDeg(compassDeg({ x: 0, y: 59 }, ctr, 180))).toBe('W')
+    expect(dirOfDeg(compassDeg({ x: 60, y: 59 }, ctr, 180))).toBe('E')
+  })
+  it('lưới 9 ô: ô giữa là trung cung, ô giữa-dưới là hướng nhà, ô khuyết được đo', () => {
+    const g = nineGrid(frame, [{ x: 40, y: 0, w: 20, h: 118 / 3 }], { x: 30, y: 59 }, 60)
+    expect(g[4].dir).toBe('C')
+    expect(g[7].dir).toBe(dirOfDeg(60)) // hướng Dần (60°) thuộc Đông Bắc
+    expect(g[2].missing).toBeCloseTo(1)
+    expect(g[0].missing).toBe(0)
+  })
+})
+
+describe('cửu cung theo hình nhà', () => {
+  it('nhà dài hẹp hướng Dần: 8 ô ngoài là 8 phương vị khác nhau, hướng ở giữa cạnh trước, tọa ở giữa cạnh sau', () => {
+    const g = nineGrid({ x: 0, y: 0, w: 400, h: 793 }, [], { x: 200, y: 396 }, 60)
+    const outer = g.filter((c) => c.dir !== 'C').map((c) => c.dir)
+    expect(new Set(outer).size).toBe(8)
+    expect(g[7].dir).toBe('NE') // giữa cạnh trước = cung hướng
+    expect(g[1].dir).toBe('SW') // giữa cạnh sau = cung tọa
+    expect(g[6].dir).toBe('E') // góc trước bên trái
+    expect(g[8].dir).toBe('N') // góc trước bên phải
+  })
+  it('nhà hướng Nam: bên trái là Tây, bên phải là Đông', () => {
+    const g = nineGrid({ x: 0, y: 0, w: 60, h: 60 }, [], { x: 30, y: 30 }, 180)
+    expect(g[3].dir).toBe('W')
+    expect(g[5].dir).toBe('E')
+  })
+})
